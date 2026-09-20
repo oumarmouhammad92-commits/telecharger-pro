@@ -108,26 +108,36 @@ Les fichiers générés apparaissent dans `release/` :
 L'installateur embarque le moteur (`resources/python/backend.py`). Il faut donc que **Python 3.9+ soit
 installé sur le PC cible** : le moteur utilise la bibliothèque standard, aucune installation `pip` n'est requise.
 
-## 7. Publier sur votre compte GitHub
+## 7. Dépôt GitHub (déjà publié)
 
-Le dépôt est déjà initialisé et configuré pour `oumarmouhammad92` / `oumarmouhammad92@gmail.com`.
+Le code est **déjà envoyé** sur votre compte GitHub :
+
+> **https://github.com/oumarmouhammad92-commits/telecharger-pro**
+
+(Le compte technique qui pousse le code est `oumarmouhammad92-commits`, rattaché à
+l'adresse `oumarmouhammad92@gmail.com`. Le nom affiché de l'auteur est `oumarmouhammad92`.)
+
+Le dépôt distant `origin` et la branche `main` sont déjà configurés. Pour envoyer une modification :
 
 ```bash
-# 1. Créer le dépôt vide « telecharger-pro » sur https://github.com/new  (sans README)
+git add -A
+git commit -m "Ma modification"
+git push
+```
 
-# 2. Envoyer le code
-git remote add origin https://github.com/oumarmouhammad92/telecharger-pro.git
-git branch -M main
-git push -u origin main
+Pour publier une version téléchargeable dans l'onglet **Releases** (installateur Windows) :
 
-# 3. Publier une version (installateur) dans l'onglet « Releases »
-#    Nécessite un jeton GitHub (portée « repo ») :
-#    setx GH_TOKEN votre_jeton   puis rouvrir le terminal
+```bash
+npm run dist      # crée release/Telechargeur-Pro-Setup-1.0.0.exe
+
+# Publication automatique (nécessite un jeton GitHub avec la portée « repo ») :
+setx GH_TOKEN votre_jeton     # puis rouvrir le terminal
 npm run release
 ```
 
-Sans jeton, la publication des *Releases* se fait aussi simplement à la main : glissez le fichier
-`release/Telechargeur-Pro-Setup-1.0.0.exe` dans une nouvelle Release GitHub.
+Sans jeton, la publication se fait à la main : ouvrez
+<https://github.com/oumarmouhammad92-commits/telecharger-pro/releases/new>, puis glissez
+le fichier `release/Telechargeur-Pro-Setup-1.0.0.exe` dans la Release.
 
 ## 8. API locale du moteur (port 9898 par défaut)
 
