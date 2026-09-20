@@ -1,0 +1,86 @@
+{
+  "name": "telecharger-pro",
+  "version": "1.0.0",
+  "description": "Téléchargeur façon IDM : interface légère, téléchargement multi-blocs et reprise après coupure réseau, redémarrage ou même des mois plus tard.",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "node scripts/start.js",
+    "start:gui": "electron .",
+    "backend": "node scripts/start.js --no-gui",
+    "setup": "node scripts/install.js",
+    "dist": "electron-builder",
+    "build": "node scripts/build.js",
+    "release": "electron-builder --publish always"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oumarmouhammad92/telecharger-pro.git"
+  },
+  "author": {
+    "name": "oumarmouhammad92",
+    "email": "oumarmouhammad92@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/oumarmouhammad92/telecharger-pro/issues"
+  },
+  "homepage": "https://github.com/oumarmouhammad92/telecharger-pro",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.oumarmouhammad92.telechargerpro",
+    "productName": "Telechargeur Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "python",
+        "to": "python",
+        "filter": ["**/*.py"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Telechargeur Pro",
+      "artifactName": "Telechargeur-Pro-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Telechargeur-Pro-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Network"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.utilities"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "oumarmouhammad92",
+      "repo": "telecharger-pro"
+    }
+  }
+}

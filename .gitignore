@@ -1,0 +1,18 @@
+# Dépendances
+node_modules/
+
+# Sortie de construction
+release/
+dist/
+build/
+
+# Runtime local (progression des téléchargements) : jamais versionné
+state/
+downloads/
+*.log
+
+# Divers
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
