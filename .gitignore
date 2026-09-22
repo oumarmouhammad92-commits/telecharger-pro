@@ -11,6 +11,11 @@ state/
 downloads/
 *.log
 
+# Python embarqué (téléchargé par scripts/fetch_python.js, trop volumineux
+# pour un dépôt Git) et archives d'installation
+python-embed/
+vendor/
+
 # Divers
 .DS_Store
 Thumbs.db

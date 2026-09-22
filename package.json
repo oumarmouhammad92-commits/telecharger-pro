@@ -8,9 +8,9 @@
     "start:gui": "electron .",
     "backend": "node scripts/start.js --no-gui",
     "setup": "node scripts/install.js",
-    "dist": "electron-builder",
+    "dist": "node scripts/build.js",
     "build": "node scripts/build.js",
-    "release": "electron-builder --publish always"
+    "release": "node scripts/build.js --publish always"
   },
   "repository": {
     "type": "git",
@@ -37,6 +37,7 @@
     },
     "files": [
       "electron/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "extraResources": [
@@ -44,9 +45,19 @@
         "from": "python",
         "to": "python",
         "filter": ["**/*.py"]
+      },
+      {
+        "from": "python-embed",
+        "to": "python-embed"
+      },
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": ["icon.ico", "icon.png"]
       }
     ],
     "win": {
+      "icon": "assets/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -64,6 +75,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Telechargeur Pro",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "uninstallDisplayName": "Telechargeur Pro",
       "artifactName": "Telechargeur-Pro-Setup-${version}.${ext}"
     },
     "portable": {
@@ -71,11 +86,13 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Network"
+      "category": "Network",
+      "icon": "assets/icon.png"
     },
     "mac": {
       "target": ["dmg"],
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.png"
     },
     "publish": {
       "provider": "github",

@@ -16,6 +16,7 @@
 const { spawn, spawnSync } = require('child_process');
 const net = require('net');
 const http = require('http');
+const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -54,12 +55,26 @@ function findFreePort(start, tries) {
 
 /** Vérifie la disponibilité du runtime Python. */
 function findPython() {
-  const candidates = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
-  for (const cmd of candidates) {
-    const probe = cmd === 'py' ? ['-3', '--version'] : ['--version'];
-    const r = spawnSync(cmd, probe, { stdio: 'pipe', encoding: 'utf8', timeout: 8000 });
+  // 1. Python embarqué dans le projet (python-embed/) : aucun prérequis pour l'utilisateur.
+  const bundled = path.join(
+    ROOT,
+    'python-embed',
+    process.platform === 'win32' ? 'python.exe' : 'bin/python3'
+  );
+  const candidates = [];
+  if (fs.existsSync(bundled)) {
+    candidates.push({ cmd: bundled, args: [] });
+  }
+  // 2. Python du système (utile pour le développement).
+  for (const cmd of (process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'])) {
+    candidates.push({ cmd, args: cmd === 'py' ? ['-3'] : [] });
+  }
+
+  for (const candidate of candidates) {
+    const probe = candidate.args.concat(['--version']);
+    const r = spawnSync(candidate.cmd, probe, { stdio: 'pipe', encoding: 'utf8', timeout: 8000 });
     if (r.status === 0) {
-      return { cmd, args: cmd === 'py' ? ['-3'] : [], version: (r.stdout || r.stderr || '').trim() };
+      return Object.assign({}, candidate, { version: (r.stdout || r.stderr || '').trim() });
     }
   }
   return null;

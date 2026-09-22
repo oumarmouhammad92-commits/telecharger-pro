@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, spawnSync } = require('child_process');
@@ -9,18 +9,41 @@ const BACKEND_PORT = parseInt(process.env.SDM_BACKEND_PORT || '9898', 10);
 // Quand scripts/start.js gère déjà le moteur, on n'en lance pas un second.
 const EXTERNAL_BACKEND = process.env.SDM_EXTERNAL_BACKEND === '1';
 
-// Détection du runtime Python
+// Python embarqué, livré avec l'application installée : permet de fonctionner
+// sur n'importe quel PC, sans que Python soit installé par l'utilisateur.
+function bundledPython() {
+  const base = process.resourcesPath
+    ? path.join(process.resourcesPath, 'python-embed')
+    : path.join(__dirname, '..', 'python-embed');
+  const candidates = process.platform === 'win32'
+    ? [path.join(base, 'python.exe')]
+    : [path.join(base, 'bin', 'python3'), path.join(base, 'bin', 'python')];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function works(cmd, args) {
+  try {
+    const r = spawnSync(cmd, args.concat(['--version']), { stdio: 'pipe', encoding: 'utf8', timeout: 8000 });
+    return r.status === 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Détection du runtime Python : Python embarqué d'abord (version installée),
+// puis Python du système (utile en développement).
 function findPython() {
+  const bundled = bundledPython();
+  if (bundled && works(bundled, [])) return { cmd: bundled, args: [] };
   const candidates = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
   for (const c of candidates) {
-    const probe = c === 'py' ? ['-3', '--version'] : ['--version'];
-    try {
-      const r = spawnSync(c, probe, { stdio: 'pipe', encoding: 'utf8', timeout: 8000 });
-      if (r.status === 0) return { cmd: c, args: c === 'py' ? ['-3'] : [] };
-    } catch (e) {
-      // on essaie le candidat suivant
-    }
+    const probe = c === 'py' ? ['-3'] : [];
+    if (works(c, probe)) return { cmd: c, args: probe };
   }
+  if (bundled) return { cmd: bundled, args: [] };
   return { cmd: 'python', args: [] };
 }
 
@@ -146,6 +169,21 @@ function requestBackend(method, path, body) {
 
 let mainWindow = null;
 
+// Icône de la fenêtre et de la barre des tâches (fournie avec l'application).
+function windowIcon() {
+  const candidates = [
+    process.resourcesPath ? path.join(process.resourcesPath, 'assets', 'icon.ico') : null,
+    path.join(__dirname, '..', 'assets', 'icon.ico'),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      const image = nativeImage.createFromPath(candidate);
+      if (!image.isEmpty()) return image;
+    }
+  }
+  return undefined;
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 720,
@@ -153,6 +191,7 @@ async function createWindow() {
     minWidth: 640,
     minHeight: 480,
     frame: true,
+    icon: windowIcon(),
     backgroundColor: '#0e0e12',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

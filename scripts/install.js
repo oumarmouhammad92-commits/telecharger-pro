@@ -11,8 +11,11 @@ if (result.status !== 0) {
 
 console.log('');
 console.log('[setup] Dépendances installées.');
-console.log('[setup] Vérifiez que Python 3.9+ est disponible :');
+console.log('[setup] Python (développement uniquement) :');
 spawnSync('python', ['--version'], { stdio: 'inherit', shell: true });
+console.log('');
+console.log('[setup] En l’absence de Python, lancez  node scripts/fetch_python.js');
+console.log('[setup] pour utiliser le Python embarqué — c’est déjà le cas de la version installée.');
 console.log('');
 console.log('Démarrage :  npm start      (ou double-clic sur start.bat)');
 console.log('Moteur seul : npm run backend');

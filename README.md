@@ -20,7 +20,8 @@ Un petit gestionnaire de téléchargements **inspiré d'IDM (Internet Download M
 | Reprise réseau | 5 tentatives par bloc avec attente progressive (1 s → 15 s) en cas de coupure |
 | Diagnostic | `/health`, `/debug`, journal du moteur dans la console de démarrage |
 | Portable | Un seul petit dossier, aucune base de données, aucune dépendance Python externe (bibliothèque standard uniquement) |
-| Installation | Générateur d'installateur Windows (NSIS) + version portable + AppImage/dmg |
+| Aucun prérequis | Python embarqué dans le paquet (`python-embed/`) : la version installée fonctionne sur un PC où Python n'est pas installé |
+| Installation | Générateur d'installateur Windows (NSIS) + version portable + AppImage/dmg, icône personnalisée intégrée |
 
 ## 2. Arborescence
 
@@ -34,10 +35,17 @@ downloader-project/
 │  └─ renderer.js       Liste des téléchargements, progression, vitesse, boutons
 ├─ python/
 │  └─ backend.py        MOTEUR : serveur HTTP local + téléchargement multi-blocs + reprise
+├─ python-embed/        Python embarqué, téléchargé par la construction (non versionné)
+├─ assets/
+│  ├─ icon.ico          Icône de l'application (Windows)
+│  └─ icon.png          Icône 512 px (Linux/macOS, documentation)
 ├─ scripts/
 │  ├─ start.js          Démarrage conjoint moteur Python + interface Electron (npm start)
 │  ├─ install.js        Installation des dépendances et vérification de Python (npm run setup)
-│  └─ build.js          Construction de l'installateur (npm run build)
+│  ├─ fetch_python.js   Télécharge le Python embarqué (python-embed/)
+│  ├─ make_icons.py     Dessine assets/icon.ico + assets/icon.png (sans dépendance)
+│  ├─ prepare_codesign.js  Prépare l'outil rcedit sans droits administrateur
+│  └─ build.js          Construction de l'installateur (npm run dist)
 ├─ state/tasks.json      État de reprise (créé automatiquement, non versionné)
 ├─ downloads/           Fichiers téléchargés (non versionné)
 ├─ start.bat            Lancement par double-clic sous Windows
@@ -46,8 +54,13 @@ downloader-project/
 
 ## 3. Démarrage rapide
 
-**Prérequis** : [Node.js 18+](https://nodejs.org/) et [Python 3.9+](https://www.python.org/downloads/)
+**Prérequis pour développer** : [Node.js 18+](https://nodejs.org/) et [Python 3.9+](https://www.python.org/downloads/)
 (cochez « Add python.exe to PATH » à l'installation de Python).
+
+> Python n'est nécessaire **que pour le développement**. La version installée embarque son propre
+> interpréteur (`python-embed/`), donc le PC de destination n'a besoin de rien.
+> Pour ne plus dépendre non plus du Python du système en développement, lancez
+> `node scripts/fetch_python.js` : la suite se comportera exactement comme la version installée.
 
 ```bash
 # 1. Installation (dépendances Electron)
@@ -105,8 +118,38 @@ Les fichiers générés apparaissent dans `release/` :
 * `Telechargeur-Pro-Portable-1.0.0.exe` → **version portable**, aucun droit administrateur requis ;
 * `*.AppImage` / `*.deb` sous Linux, `*.dmg` sous macOS (la construction doit être faite sur le système visé).
 
-L'installateur embarque le moteur (`resources/python/backend.py`). Il faut donc que **Python 3.9+ soit
-installé sur le PC cible** : le moteur utilise la bibliothèque standard, aucune installation `pip` n'est requise.
+L'installateur embarque **tout ce qu'il faut**, interpréteur compris :
+
+* le moteur : `resources/python/backend.py` ;
+* un **Python embarqué** : `resources/python-embed/`, c'est-à-dire la distribution officielle
+  « embeddable » de python.org (≈ 11 Mo), téléchargée automatiquement par `scripts/fetch_python.js`
+  au moment de la construction ;
+* les icônes : `resources/assets/`.
+
+> **Le PC cible n'a donc aucun prérequis** : ni Python, ni `pip`, ni droits d'administrateur
+> (la version portable n'en demande aucun). Le moteur n'utilise que la bibliothèque standard.
+
+Au démarrage, l'application cherche l'interpréteur dans cet ordre : Python embarqué (version installée),
+puis `py -3`, `python`, `python3` du système (utile en développement).
+
+Chaque étape de `scripts/build.js` est facultative : un échec produit un avertissement, pas un arrêt.
+
+| Étape | Rôle | Si elle échoue |
+| --- | --- | --- |
+| Icône | Génère `assets/icon.ico` + `assets/icon.png` (ou réutilise ceux déjà présents) | Icône standard d'Electron |
+| Python embarqué | Télécharge `python-3.13.x-embed-amd64.zip` et l'extrait dans `python-embed/` | La version installée utilisera le Python du système |
+| Outil rcedit | Extrait l'archive `winCodeSign` **sans le dossier `darwin`**, dont les liens symboliques sont refusés par Windows — c'est le rôle de `scripts/prepare_codesign.js` | L'icône du `.exe` n'est pas gravée |
+| electron-builder | Produit l'installateur NSIS + la version portable | La construction s'arrête |
+
+La première construction a donc besoin d'un accès Internet (Python embarqué + outil rcedit).
+Les dossiers `python-embed/` (10 Mo) et `vendor/` ne sont **pas versionnés** : ils sont reconstruits à la
+demande. Pour choisir une autre version de Python, définissez la variable d'environnement
+`SDM_PYTHON_VERSION` (par défaut `3.13.7`) puis relancez `npm run dist` — ou
+`node scripts/fetch_python.js --force` pour forcer le retéléchargement.
+
+Les arguments passés au script sont transmis à electron-builder : `npm run release` effectue donc les
+mêmes préparations que `npm run dist`, puis publie la version dans les Releases GitHub
+(jeton `GH_TOKEN` requis, voir la section suivante).
 
 ## 7. Dépôt GitHub (déjà publié)
 
@@ -166,7 +209,9 @@ le fichier `release/Telechargeur-Pro-Setup-1.0.0.exe` dans la Release.
 
 | Symptôme | Solution |
 | --- | --- |
-| « Python 3 est introuvable » | Installez Python depuis python.org en cochant **Add python.exe to PATH**, puis relancez `start.bat` |
+| « Python 3 est introuvable » — version installée | Anormal : le paquet embarque son interpréteur. Vérifiez la présence de `resources/python-embed/python.exe`, sinon reconstruisez avec `npm run dist` |
+| « Python 3 est introuvable » — développement | Installez Python depuis python.org en cochant **Add python.exe to PATH**, ou lancez `node scripts/fetch_python.js` pour utiliser le Python embarqué, puis relancez `start.bat` |
+| L'icône du `.exe` reste celle d'Electron | Relancez `npm run dist` : `scripts/prepare_codesign.js` prépare rcedit sans droit administrateur |
 | « Electron n'est pas installé » | Lancez `npm install` à la racine du projet |
 | La liste reste vide / « Moteur indisponible » | Vérifiez la console de démarrage : le moteur indique son port (`PORT=9898`). Un antivirus peut bloquer un port local |
 | Un téléchargement reste à 0 % | Le serveur distant refuse peut-être `HEAD`/`Range` : le moteur basculera en mode simple, ou l'URL nécessite une session (cookies) |
