@@ -178,6 +178,26 @@ setx GH_TOKEN votre_jeton     # puis rouvrir le terminal
 npm run release
 ```
 
+`npm run release` dépose les fichiers dans une Release **en brouillon** (comportement d'electron-builder) :
+cliquez sur **Publish release** sur la page de la Release pour la rendre publique.
+
+> **Connexion montante lente** : le téléversement peut s'interrompre sur `Error: Request timed out`
+> ou `write ECONNRESET` (cela arrive avec les ~87 Mo de l'installateur). Les fichiers sont déjà
+> construits dans `release/` : reprenez alors l'envoi avec `curl`, qui n'impose aucun délai
+> d'expiration global.
+>
+> ```powershell
+> $repo = 'oumarmouhammad92-commits/telecharger-pro'
+> $id   = (curl.exe -s -H "Authorization: token $env:GH_TOKEN" `
+>   "https://api.github.com/repos/$repo/releases" | ConvertFrom-Json |
+>   Where-Object tag_name -eq 'v1.0.0').id
+> foreach ($f in 'Telechargeur-Pro-Setup-1.0.0.exe', 'Telechargeur-Pro-Portable-1.0.0.exe') {
+>   curl.exe -X POST -T "release\$f" -H "Authorization: token $env:GH_TOKEN" `
+>     -H 'Content-Type: application/octet-stream' `
+>     "https://uploads.github.com/repos/$repo/releases/$id/assets?name=$f"
+> }
+> ```
+
 Sans jeton, la publication se fait à la main : ouvrez
 <https://github.com/oumarmouhammad92-commits/telecharger-pro/releases/new>, puis glissez
 le fichier `release/Telechargeur-Pro-Setup-1.0.0.exe` dans la Release.
